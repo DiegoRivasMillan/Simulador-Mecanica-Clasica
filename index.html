@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#E6D3C6">
+  <meta name="description" content="Simulador académico de movimiento de rodadura con análisis físico, animación y evaluación de calidad.">
+  <title>Simulador de Rodamiento | Mecánica clásica</title>
+  <style>
+    :root {
+      --fondo: #E6D3C6;
+      --papel: #F7F0EA;
+      --papel-2: #EFE3DA;
+      --tinta: #121113;
+      --tinta-suave: #625A55;
+      --borde: #CBB9AC;
+      --carbon: #181818;
+      --grafito: #1F1F1F;
+      --elevado: #262626;
+      --verde: #64D85A;
+      --rojo: #E42535;
+      --amarillo: #D69B2D;
+      --radio: 9px;
+      --sombra: 0 2px 15px rgba(51, 51, 51, .07);
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --display: "Libre Baskerville", Georgia, "Times New Roman", serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--tinta);
+      background: var(--fondo);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .contenedor { width: min(1200px, calc(100% - 36px)); margin: 0 auto; }
+
+    .hero {
+      padding: 44px 0 30px;
+      text-align: center;
+      border-bottom: 1px solid rgba(18, 17, 19, .22);
+    }
+    .hero__marca {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 16px;
+      color: var(--tinta-suave);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+    .hero__marca::before, .hero__marca::after {
+      content: ""; display: block; width: 25px; height: 1px; background: var(--tinta-suave);
+    }
+    h1 {
+      max-width: 1080px;
+      margin: 0 auto 15px;
+      font-family: var(--display);
+      font-size: clamp(25px, 4vw, 43px);
+      font-weight: 400;
+      letter-spacing: -.035em;
+      line-height: 1.18;
+      text-wrap: balance;
+    }
+    .hero__subtitulos { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 22px; color: var(--tinta-suave); }
+    .hero__subtitulos p { margin: 0; font-size: 13px; }
+    .hero__subtitulos strong { color: var(--tinta); font-weight: 650; }
+
+    .navegacion {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      padding: 22px 0 26px;
+    }
+    .pestana {
+      padding: 11px 18px;
+      color: var(--tinta);
+      background: transparent;
+      border: 1px solid rgba(18,17,19,.35);
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 650;
+      transition: background .2s ease, color .2s ease, transform .2s ease, border-color .2s ease;
+    }
+    .pestana:hover { background: rgba(18,17,19,.07); transform: translateY(-1px); }
+    .pestana[aria-selected="true"] { color: #F7F0EA; background: var(--carbon); border-color: var(--carbon); }
+
+    .seccion-simulador { padding-bottom: 22px; }
+    .panel-simulador { animation: aparecer .25s ease both; }
+    .panel-simulador[hidden] { display: none; }
+    @keyframes aparecer { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    .encabezado-seccion { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 0 0 16px; }
+    .encabezado-seccion h2, .titulo-bloque {
+      margin: 0;
+      font-family: var(--display);
+      font-size: clamp(23px, 3vw, 31px);
+      font-weight: 400;
+      letter-spacing: -.025em;
+      line-height: 1.2;
+    }
+    .encabezado-seccion p { max-width: 470px; margin: 0; color: var(--tinta-suave); font-size: 12px; text-align: right; }
+    .rejilla-principal { display: grid; grid-template-columns: minmax(280px, .78fr) minmax(0, 1.42fr); gap: 16px; align-items: start; }
+    .tarjeta {
+      min-width: 0;
+      padding: 20px;
+      background: var(--papel);
+      border: 1px solid var(--borde);
+      border-radius: var(--radio);
+      box-shadow: var(--sombra);
+    }
+    .tarjeta h3 { margin: 0 0 15px; font-size: 14px; font-weight: 750; letter-spacing: .01em; }
+    .tarjeta__intro { margin: -8px 0 17px; color: var(--tinta-suave); font-size: 12px; }
+    .campos { display: grid; grid-template-columns: 1fr 1fr; gap: 13px 12px; }
+    .campo { min-width: 0; }
+    .campo--completo { grid-column: 1 / -1; }
+    .campo label { display: block; margin-bottom: 6px; color: #39332F; font-size: 11px; font-weight: 700; letter-spacing: .02em; }
+    .campo input {
+      width: 100%; min-width: 0; height: 42px; padding: 9px 11px;
+      color: var(--tinta); background: #FFFCF9; border: 1px solid #BFAEA2; border-radius: 4px;
+      outline: none; transition: border-color .18s ease, box-shadow .18s ease;
+    }
+    .campo input:focus { border-color: #2B7FFF; box-shadow: 0 0 0 2px rgba(43,127,255,.16); }
+    .campo input[readonly] { background: #EDE2D9; color: #514943; font-weight: 700; cursor: not-allowed; }
+    .ayuda { display: block; margin-top: 5px; color: #756A63; font-size: 10px; }
+    .botonera { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 17px; }
+    .boton {
+      min-height: 40px; padding: 9px 13px; border: 1px solid transparent; border-radius: 4px;
+      font-size: 12px; font-weight: 750; letter-spacing: .01em;
+      transition: transform .18s ease, filter .18s ease, box-shadow .18s ease;
+    }
+    .boton:hover { transform: translateY(-1px); filter: brightness(.96); box-shadow: 0 3px 8px rgba(18,17,19,.12); }
+    .boton:active { transform: translateY(0); }
+    .boton:focus-visible, .pestana:focus-visible, summary:focus-visible { outline: 3px solid rgba(43,127,255,.45); outline-offset: 2px; }
+    .boton--accion { color: #10200E; background: var(--verde); border-color: #52C448; }
+    .boton--simulacion { color: #FFF8F6; background: var(--rojo); border-color: #CB1D2B; }
+    .boton--secundario { color: var(--tinta); background: transparent; border-color: #B8A69A; }
+    .mensaje-error {
+      display: none; margin-top: 13px; padding: 10px 12px; color: #7A1720;
+      background: #F8E2E1; border: 1px solid #D88B8E; border-radius: 4px; font-size: 12px;
+    }
+    .mensaje-error.visible { display: block; }
+    .mensaje-info { margin-top: 12px; min-height: 18px; color: var(--tinta-suave); font-size: 11px; }
+
+    .resultados { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+    .resultado {
+      min-width: 0; padding: 12px 12px 11px; background: #FDF9F5;
+      border: 1px solid #DCCDC2; border-radius: 6px;
+    }
+    .resultado__nombre { display: block; min-height: 30px; color: #6C615A; font-size: 10px; font-weight: 700; line-height: 1.35; text-transform: uppercase; letter-spacing: .045em; }
+    .resultado__valor { display: block; margin-top: 4px; font-size: clamp(17px, 2.1vw, 23px); font-weight: 750; letter-spacing: -.04em; line-height: 1.2; overflow-wrap: anywhere; }
+    .resultado__unidad { display: block; margin-top: 3px; color: #766B64; font-size: 10px; }
+    .resultado--condicion { grid-column: span 3; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .resultado--condicion .resultado__nombre { min-height: 0; }
+    .estado { display: inline-flex; align-items: center; gap: 7px; padding: 6px 9px; border: 1px solid; border-radius: 4px; font-size: 11px; font-weight: 800; }
+    .estado--bien { color: #1B6520; background: #E1F4DF; border-color: #9BCB96; }
+    .estado--mal { color: #8A1C27; background: #F8E3E4; border-color: #DDA0A4; }
+    .calidad {
+      display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: 14px;
+      margin-top: 12px; padding: 14px; background: #EFE3DA; border: 1px solid #D7C5B8; border-radius: 6px;
+    }
+    .calidad__numero { min-width: 86px; text-align: center; }
+    .calidad__numero strong { display: block; font-size: 29px; letter-spacing: -.06em; line-height: 1; }
+    .calidad__numero span { display: block; margin-top: 4px; color: #6C615A; font-size: 9px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+    .calidad__texto p { margin: 6px 0 0; color: #534A44; font-size: 11px; }
+    .insignia { display: inline-block; padding: 4px 7px; border: 1px solid; border-radius: 4px; font-size: 10px; font-weight: 800; }
+    .insignia--buena { color: #17651D; background: #DFF2DD; border-color: #8DC58A; }
+    .insignia--media { color: #79520C; background: #F8EDCF; border-color: #D8BD70; }
+    .insignia--mala { color: #8A1C27; background: #F8E3E4; border-color: #DDA0A4; }
+    .detalle-friccion { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #D9C9BD; color: #665B54; font-size: 10px; }
+
+    .visualizacion { margin-top: 16px; }
+    .visualizacion__cabecera { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 9px; }
+    .visualizacion__cabecera h3 { margin: 0; font-size: 13px; font-weight: 750; }
+    .indicador-directo { display: inline-flex; align-items: center; gap: 6px; color: #6A605A; font-size: 10px; }
+    .indicador-directo::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--verde); }
+    .lienzo-marco { overflow: hidden; background: var(--carbon); border: 1px solid #393939; border-radius: 7px; }
+    canvas.animacion { display: block; width: 100%; height: 310px; }
+    .leyenda-animacion { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 5px 12px; padding: 8px 12px; color: #BEBAB4; background: #111; border-top: 1px solid #333; font-size: 10px; }
+    .grafica-contenedor { height: 245px; padding: 12px; background: var(--carbon); border: 1px solid #393939; border-radius: 7px; }
+    .grafica-contenedor canvas { width: 100% !important; height: 100% !important; }
+    .nota-modelo { margin: 10px 0 0; color: #6D625B; font-size: 10px; }
+
+    .bloque-inferior { margin-top: 46px; }
+    .teoria {
+      overflow: hidden; background: var(--papel); border: 1px solid var(--borde); border-radius: var(--radio); box-shadow: var(--sombra);
+    }
+    .teoria summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 19px 21px; cursor: pointer; list-style: none; }
+    .teoria summary::-webkit-details-marker { display: none; }
+    .teoria summary::after { content: "+"; flex: 0 0 auto; width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid #B8A69A; border-radius: 4px; font-size: 20px; line-height: 1; }
+    .teoria[open] summary::after { content: "−"; }
+    .teoria__contenido { padding: 0 21px 22px; border-top: 1px solid #D7C6BA; }
+    .teoria__contenido p { max-width: 950px; color: #4D443F; font-size: 12px; }
+    .formula-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 9px; margin: 15px 0 21px; }
+    .formula { padding: 12px; background: #EFE3DA; border: 1px solid #D8C7BB; border-radius: 5px; }
+    .formula span { display: block; margin-bottom: 5px; color: #756A63; font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .formula strong { font-family: Georgia, serif; font-size: 16px; font-weight: 500; overflow-wrap: anywhere; }
+    .nota-teorica { padding: 10px 12px; background: #F8EDCF; border-left: 3px solid #D69B2D; color: #59451B !important; }
+    .tabla-contenedor { overflow-x: auto; border: 1px solid #D8C7BB; border-radius: 5px; }
+    table { width: 100%; border-collapse: collapse; min-width: 550px; }
+    th, td { padding: 11px 13px; border-bottom: 1px solid #DFD1C7; text-align: left; font-size: 11px; }
+    thead th { color: #635952; background: #EFE3DA; font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    tbody tr:nth-child(even) { background: #F3EAE3; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody td:first-child { font-weight: 700; }
+    .integrantes { margin: 24px 0 0; padding: 20px; background: var(--carbon); border: 1px solid #333; border-radius: var(--radio); color: #EEEAE5; }
+    .integrantes h2 { margin: 0 0 14px; font-family: var(--display); font-size: 25px; font-weight: 400; letter-spacing: -.025em; }
+    .integrantes table { min-width: 460px; }
+    .integrantes thead th { color: #B4ADA6; background: #1F1F1F; border-bottom-color: #3A3A3A; }
+    .integrantes td { color: #EEEAE5; border-bottom-color: #333; }
+    .integrantes tbody tr:nth-child(even) { background: #222; }
+    .integrantes tbody td:last-child { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .04em; }
+    footer { margin-top: 40px; padding: 18px 0 27px; border-top: 1px solid rgba(18,17,19,.18); color: #6E625A; text-align: center; font-size: 10px; }
+
+    @media (max-width: 900px) {
+      .rejilla-principal { grid-template-columns: 1fr; }
+      .formula-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .encabezado-seccion { align-items: start; flex-direction: column; }
+      .encabezado-seccion p { text-align: left; }
+    }
+    @media (max-width: 600px) {
+      .contenedor { width: min(100% - 22px, 1200px); }
+      .hero { padding: 32px 0 24px; }
+      .hero__subtitulos { flex-direction: column; gap: 4px; }
+      .navegacion { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 16px 0 20px; }
+      .pestana { padding: 10px 8px; font-size: 11px; }
+      .tarjeta { padding: 15px; }
+      .campos { grid-template-columns: 1fr; }
+      .campo--completo { grid-column: auto; }
+      .resultados { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .resultado--condicion { grid-column: span 2; align-items: flex-start; flex-direction: column; }
+      .calidad { grid-template-columns: 1fr; text-align: left; }
+      .calidad__numero { text-align: left; }
+      .calidad__numero strong { display: inline; }
+      .calidad__numero span { display: inline; margin-left: 6px; }
+      canvas.animacion { height: 240px; }
+      .grafica-contenedor { height: 220px; }
+      .formula-grid { grid-template-columns: 1fr; }
+      .teoria summary { padding: 15px; }
+      .teoria__contenido { padding: 0 15px 17px; }
+      .integrantes { padding: 16px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="contenedor">
+      <div class="hero__marca">Laboratorio virtual · Mecánica clásica</div>
+      <h1>ANÁLISIS DEL MOVIMIENTO DE LA RODADURA DE UNA RUEDA EN UN SISTEMA SIMULADOR DE CALIDAD USANDO PRINCIPIOS DE MECÁNICA CLÁSICA</h1>
+      <div class="hero__subtitulos">
+        <p><strong>Mecánica clásica</strong> - 29941</p>
+        <p><strong>Docente:</strong> CARDENAS MORALES, MAXIMO JOEL</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="contenedor">
+    <nav class="navegacion" aria-label="Seleccionar simulador" role="tablist">
+      <button class="pestana" id="pestana-completo" type="button" role="tab" aria-selected="true" aria-controls="panel-completo" data-panel="completo">Simulador de Rodamiento</button>
+      <button class="pestana" id="pestana-escala" type="button" role="tab" aria-selected="false" aria-controls="panel-escala" data-panel="escala">Simulador a Escala</button>
+    </nav>
+
+    <section class="seccion-simulador" aria-label="Simuladores de rodadura">
+      <section class="panel-simulador" id="panel-completo" role="tabpanel" aria-labelledby="pestana-completo">
+        <div class="encabezado-seccion">
+          <h2>Simulador de Rodamiento</h2>
+          <p>Modelo de disco sólido con rodadura ideal, sin deslizamiento y gravedad constante de 9,81 m/s².</p>
+        </div>
+        <div class="rejilla-principal">
+          <article class="tarjeta">
+            <h3>Parámetros de entrada</h3>
+            <p class="tarjeta__intro">Ingresa las propiedades de la rueda y las dimensiones de la pendiente.</p>
+            <form id="form-completo" novalidate>
+              <div class="campos">
+                <div class="campo campo--completo">
+                  <label for="masa-completo">Masa de la rueda (kg)</label>
+                  <input id="masa-completo" name="masa" type="number" min="0.000001" step="any" value="2" required>
+                </div>
+                <div class="campo">
+                  <label for="radio-completo">Radio de la rueda (m)</label>
+                  <input id="radio-completo" name="radio" type="number" min="0.000001" step="any" value="0.15" required>
+                </div>
+                <div class="campo">
+                  <label for="friccion-completo">Coeficiente de fricción (μ)</label>
+                  <input id="friccion-completo" name="friccion" type="number" min="0" step="any" value="0.4" required>
+                  <small class="ayuda">Coeficiente estático disponible.</small>
+                </div>
+                <div class="campo">
+                  <label for="longitud-completo">Longitud horizontal (m)</label>
+                  <input id="longitud-completo" name="longitud" type="number" min="0.000001" step="any" value="2" required>
+                </div>
+                <div class="campo">
+                  <label for="altura-completo">Altura de la pendiente (m)</label>
+                  <input id="altura-completo" name="altura" type="number" min="0.000001" step="any" value="0.6" required>
+                </div>
+              </div>
+              <div class="botonera">
+                <button class="boton boton--accion" type="submit">Calcular resultados</button>
+                <button class="boton boton--accion" type="button" data-restablecer="completo">Restablecer valores</button>
+              </div>
+              <div class="mensaje-error" id="error-completo" role="alert"></div>
+              <div class="mensaje-info" id="info-completo" aria-live="polite">Parámetros de ejemplo cargados. Calcula para actualizar los resultados.</div>
+            </form>
+          </article>
+
+          <article class="tarjeta">
+            <h3>Resultados del análisis</h3>
+            <div class="resultados" id="resultados-completo" aria-live="polite">
+              <div class="resultado"><span class="resultado__nombre">Ángulo de la pendiente</span><strong class="resultado__valor">—</strong><span class="resultado__unidad">grados (°)</span></div>
+              <div class="resultado"><span class="resultado__nombre">Aceleración lineal</span><strong class="resultado__valor">—</strong><span class="resultado__unidad">m/s²</span></div>
+              <div class="resultado"><span class="resultado__nombre">Velocidad final</span><strong class="resultado__valor">—</strong><span class="resultado__unidad">m/s</span></div>
+              <div class="resultado"><span class="resultado__nombre">Tiempo de recorrido</span><strong class="resultado__valor">—</strong><span class="resultado__unidad">s</span></div>
+              <div class="resultado"><span class="resultado__nombre">Fuerza de fricción disponible</span><strong class="resultado__valor">—</strong><span class="resultado__unidad">N · μN</span></div>
+              <div class="resultado"><span class="resultado__nombre">Energía cinética traslacional</span><strong class="resultado__valor">—</strong><span class="resultado__unidad">J</span></div>
+              <div class="resultado"><span class="resultado__nombre">Energía cinética rotacional</span><strong class="resultado__valor">—</strong><span class="resultado__unidad">J</span></div>
+              <div class="resultado"><span class="resultado__nombre">Eficiencia de rodadura</span><strong class="resultado__valor">—</strong><span class="resultado__unidad">%</span></div>
+              <div class="resultado resultado--condicion"><div><span class="resultado__nombre">Condición de rodadura pura</span><span class="resultado__unidad">Se compara la fricción requerida con la máxima disponible.</span></div><span class="estado">Pendiente de cálculo</span></div>
+            </div>
+            <div class="calidad" id="calidad-completo">
+              <div class="calidad__numero"><strong>—</strong><span>de 20 puntos</span></div>
+              <div class="calidad__texto"><span class="insignia">Sin evaluar</span><p>El índice de calidad aparecerá después del cálculo.</p></div>
+            </div>
+            <div class="detalle-friccion" id="detalle-friccion-completo"><span>Fricción estática requerida: —</span><span>Margen disponible: —</span></div>
+          </article>
+        </div>
+        <div class="tarjeta visualizacion">
+          <div class="visualizacion__cabecera"><h3>Animación de rodadura</h3><span class="indicador-directo">Movimiento calculado en tiempo real</span></div>
+          <div class="lienzo-marco">
+            <canvas class="animacion" id="lienzo-completo" aria-label="Animación de una rueda descendiendo por una pendiente"></canvas>
+            <div class="leyenda-animacion"><span id="estado-animacion-completo">Listo para iniciar</span><span>La rotación cumple φ = s / R</span></div>
+          </div>
+          <div class="botonera">
+            <button class="boton boton--simulacion" type="button" data-iniciar="completo">Iniciar Simulación</button>
+            <button class="boton boton--simulacion" type="button" data-detener="completo">Detener Simulación</button>
+          </div>
+          <div class="visualizacion" style="margin-top:18px">
+            <div class="visualizacion__cabecera"><h3>Velocidad vs. Tiempo</h3><span class="indicador-directo">Datos durante el recorrido</span></div>
+            <div class="grafica-contenedor"><canvas id="grafica-completo" aria-label="Gráfica de velocidad en función del tiempo"></canvas></div>
+          </div>
+          <p class="nota-modelo">La animación emplea el tiempo físico calculado (sin aceleración artificial del reloj). Si la condición de fricción no se cumple, se muestra la trayectoria ideal del modelo y se advierte que la rueda real podría deslizar.</p>
+        </div>
+      </section>
+
+      <section class="panel-simulador" id="panel-escala" role="tabpanel" aria-labelledby="pestana-escala" hidden>
+        <div class="encabezado-seccion">
+          <h2>Simulador a Escala</h2>
+          <p>Modelo de rueda tipo spinner con eje hueco, representada como un cilindro anular que desciende por una rampa de cartón.</p>
+        </div>
+        <div class="rejilla-principal">
+          <article class="tarjeta">
+            <h3>Parámetros de entrada</h3>
+            <p class="tarjeta__intro">Ingresa las dimensiones de la rueda y de la rampa en las unidades indicadas.</p>
+            <form id="form-escala" novalidate>
+              <div class="campos">
+                <div class="campo campo--completo">
+                  <label for="masa-escala">Masa de la rueda (g)</label>
+                  <input id="masa-escala" name="masa" type="number" min="0.000001" step="any" value="35" required>
+                  <small class="ayuda">Masa del conjunto giratorio; se convierte internamente a kilogramos.</small>
+                </div>
+                <div class="campo">
+                  <label for="diametro-externo">Diámetro exterior (cm)</label>
+                  <input id="diametro-externo" name="diametroExterno" type="number" min="0.000001" step="any" value="5" required>
+                </div>
+                <div class="campo">
+                  <label for="diametro-interno">Diámetro interior (cm)</label>
+                  <input id="diametro-interno" name="diametroInterno" type="number" min="0" step="any" value="0.8" required>
+                  <small class="ayuda">Orificio interior o rodamiento; puede ser 0.</small>
+                </div>
+                <div class="campo">
+                  <label for="longitud-escala">Distancia horizontal (cm)</label>
+                  <input id="longitud-escala" name="longitud" type="number" min="0.000001" step="any" value="30" required>
+                </div>
+                <div class="campo">
+                  <label for="altura-escala">Altura de la rampa (cm)</label>
+                  <input id="altura-escala" name="altura" type="number" min="0.000001" step="any" value="6" required>
+                </div>
+                <div class="campo campo--completo">
+                  <label for="friccion-escala">Coeficiente de fricción (μ)</label>
+                  <input id="friccion-escala" name="friccion" type="number" value="0.3" readonly aria-readonly="true">
+                  <small class="ayuda">Valor fijo para la superficie de cartón; no editable.</small>
+                </div>
+              </div>
+              <div class="botonera">
+                <button class="boton boton--accion" type="submit">Calcular resultados</button>
+                <button class="boton boton--accion" type="button" data-restablecer="escala">Restablecer valores</button>
+              </div>
+              <div class="mensaje-error" id="error-escala" role="alert"></div>
+              <div class="mensaje-info" id="info-escala" aria-live="polite">Parámetros de ejemplo cargados. Calcula para actualizar los resultados.</div>
+            </form>
+          </article>
+
+          <article class="tarjeta">
+            <h3>Resultados del análisis</h3>
+            <div class="resultados" id="resultados-escala" aria-live="polite">
+              <div class="resultado"><span class="resultado__nombre">Ángulo de la pendiente</span><strong class="resultado__valor">—</strong><span class="resultado__unidad">grados (°)</span></div>
+              <div class="resultado"><span class="resultado__nombre">Aceleración lineal</span><strong class="resultado__valor">—</strong><span class="resultado__unidad">m/s²</span></div>
+              <div class="resultado"><span class="resultado__nombre">Velocidad final</span><strong class="resultado__valor">—</strong><span class="resultado__unidad">m/s</span></div>
+              <div class="resultado"><span class="resultado__nombre">Tiempo de recorrido</span><strong class="resultado__valor">—</strong><span class="resultado__unidad">s</span></div>
+              <div class="resultado"><span class="resultado__nombre">Fuerza de fricción disponible</span><strong class="resultado__valor">—</strong><span class="resultado__unidad">N · μN</span></div>
+              <div class="resultado"><span class="resultado__nombre">Energía cinética traslacional</span><strong class="resultado__valor">—</strong><span class="resultado__unidad">J</span></div>
+              <div class="resultado"><span class="resultado__nombre">Energía cinética rotacional</span><strong class="resultado__valor">—</strong><span class="resultado__unidad">J</span></div>
+              <div class="resultado"><span class="resultado__nombre">Eficiencia de rodadura</span><strong class="resultado__valor">—</strong><span class="resultado__unidad">%</span></div>
+              <div class="resultado resultado--condicion"><div><span class="resultado__nombre">Condición de rodadura pura</span><span class="resultado__unidad">Se compara la fricción requerida con la máxima disponible.</span></div><span class="estado">Pendiente de cálculo</span></div>
+            </div>
+            <div class="calidad" id="calidad-escala">
+              <div class="calidad__numero"><strong>—</strong><span>de 20 puntos</span></div>
+              <div class="calidad__texto"><span class="insignia">Sin evaluar</span><p>El índice de calidad aparecerá después del cálculo.</p></div>
+            </div>
+            <div class="detalle-friccion" id="detalle-friccion-escala"><span>Fricción estática requerida: —</span><span>Margen disponible: —</span></div>
+          </article>
+        </div>
+        <div class="tarjeta visualizacion">
+          <div class="visualizacion__cabecera"><h3>Animación de rodadura</h3><span class="indicador-directo">Movimiento calculado en tiempo real</span></div>
+          <div class="lienzo-marco">
+            <canvas class="animacion" id="lienzo-escala" aria-label="Animación de una rueda a escala descendiendo por una rampa"></canvas>
+            <div class="leyenda-animacion"><span id="estado-animacion-escala">Listo para iniciar</span><span>La rotación cumple φ = s / R exterior</span></div>
+          </div>
+          <div class="botonera">
+            <button class="boton boton--simulacion" type="button" data-iniciar="escala">Iniciar Simulación</button>
+            <button class="boton boton--simulacion" type="button" data-detener="escala">Detener Simulación</button>
+          </div>
+          <div class="visualizacion" style="margin-top:18px">
+            <div class="visualizacion__cabecera"><h3>Velocidad vs. Tiempo</h3><span class="indicador-directo">Datos durante el recorrido</span></div>
+            <div class="grafica-contenedor"><canvas id="grafica-escala" aria-label="Gráfica de velocidad en función del tiempo"></canvas></div>
+          </div>
+          <p class="nota-modelo">La animación emplea el tiempo físico calculado (sin aceleración artificial del reloj). Si la condición de fricción no se cumple, se muestra la trayectoria ideal del modelo y se advierte que la rueda real podría deslizar.</p>
+        </div>
+      </section>
+    </section>
+
+    <section class="bloque-inferior">
+      <details class="teoria" open>
+        <summary><span class="titulo-bloque">Marco Teórico y Fórmulas Utilizadas</span></summary>
+        <div class="teoria__contenido">
+          <p>La rodadura es el movimiento combinado de traslación del centro de masa y rotación alrededor de dicho centro. En la condición de <strong>rodadura pura</strong>, el punto de contacto con la superficie tiene velocidad instantánea nula respecto de la rampa: la rueda avanza sin deslizar. Esto vincula la velocidad lineal con la angular mediante <strong>v = ωR</strong> y la aceleración tangencial con <strong>a = αR</strong>.</p>
+          <p>El modelo supone que la rueda parte del reposo, la pendiente es recta, la gravedad es constante (<strong>g = 9,81 m/s²</strong>) y la resistencia al rodamiento se desprecia. La fricción estática no realiza trabajo en el punto de contacto ideal; su valor debe ser suficiente para mantener la rodadura sin deslizamiento.</p>
+          <div class="formula-grid">
+            <div class="formula"><span>Ángulo de inclinación</span><strong>θ = arctan(h / L)</strong></div>
+            <div class="formula"><span>Disco sólido</span><strong>I = ½MR²</strong></div>
+            <div class="formula"><span>Disco anular</span><strong>I = ½M(Rₑₓₜ² + Rᵢₙₜ²)</strong></div>
+            <div class="formula"><span>Aceleración lineal</span><strong>a = g·senθ / (1 + I / MR²)</strong></div>
+            <div class="formula"><span>Velocidad final</span><strong>v = √(2as)</strong></div>
+            <div class="formula"><span>Tiempo de recorrido</span><strong>t = v / a</strong></div>
+            <div class="formula"><span>Longitud inclinada</span><strong>s = √(L² + h²)</strong></div>
+            <div class="formula"><span>Eficiencia de rodadura</span><strong>η = KEₜᵣₐₙₛ / KEₜₒₜₐₗ × 100%</strong></div>
+            <div class="formula"><span>Fricción máxima disponible</span><strong>fₘáₓ = μN = μMg·cosθ</strong></div>
+          </div>
+          <p class="nota-teorica"><strong>Criterio de no deslizamiento:</strong> la fricción estática requerida es fᵣₑq = I·a / R². La rodadura pura es posible cuando fᵣₑq ≤ μN, con N = Mg·cosθ. El simulador muestra por separado la fricción requerida y la máxima disponible para evitar confundir la fuerza real de fricción con su límite.</p>
+          <p class="nota-teorica"><strong>Escala de calidad:</strong> la eficiencia se compara con la eficiencia ideal del disco sólido (66,67 %) y la inercia con su referencia I/(MR²) = 0,5. La seguridad de fricción se calcula como (f<sub>máx</sub> − f<sub>req</sub>)/f<sub>máx</sub>. Los tres componentes se ponderan 40 %, 30 % y 30 %, respectivamente. Esta normalización permite que una configuración de referencia óptima pueda alcanzar 20/20.</p>
+          <h3 style="margin:20px 0 10px;font-size:13px">Comparación de los últimos resultados</h3>
+          <div class="tabla-contenedor">
+            <table aria-label="Comparación de resultados de ambos simuladores">
+              <thead><tr><th>Indicador</th><th>Simulador de Rodamiento</th><th>Simulador a Escala</th></tr></thead>
+              <tbody id="tabla-comparacion">
+                <tr><td>Ángulo</td><td>—</td><td>—</td></tr>
+                <tr><td>Aceleración lineal</td><td>—</td><td>—</td></tr>
+                <tr><td>Velocidad final</td><td>—</td><td>—</td></tr>
+                <tr><td>Tiempo de recorrido</td><td>—</td><td>—</td></tr>
+                <tr><td>Eficiencia de rodadura</td><td>—</td><td>—</td></tr>
+                <tr><td>Calidad</td><td>—</td><td>—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+
+      <section class="integrantes">
+        <h2>Integrantes del Grupo</h2>
+        <div class="tabla-contenedor" style="border-color:#373737">
+          <table aria-label="Integrantes del grupo">
+            <thead><tr><th>Apellidos y Nombres</th><th>Código</th></tr></thead>
+            <tbody>
+              <tr><td>NEYRA TENORIO, MAURICIO ADRIANO</td><td>U25314332</td></tr>
+              <tr><td>CARRASCO ALVIS, DENNIS JOSE</td><td>U25216574</td></tr>
+              <tr><td>RIVAS MILLAN, DIEGO RICARDO</td><td>U25228254</td></tr>
+              <tr><td>CURIOSO VERGARA, RENATO GESU</td><td>U25314344</td></tr>
+              <tr><td>CHAVEZ RAMIREZ, LUCIANA JAZMIN</td><td>U25228092</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer><div class="contenedor">Simulador académico de rodadura · Mecánica clásica - 29941 · g = 9,81 m/s²</div></footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script>
+    "use strict";
+
+    // Constantes y estado compartido de los dos simuladores.
+    const GRAVEDAD = 9.81;
+    const UMBRAL = 1e-10;
+    const ultimosResultados = { completo: null, escala: null };
+    const simulaciones = {
+      completo: { animacion: null, grafica: null, resultados: null, ultimoPunto: 0 },
+      escala: { animacion: null, grafica: null, resultados: null, ultimoPunto: 0 }
+    };
+
+    const valoresIniciales = {
+      completo: { masa: "2", radio: "0.15", friccion: "0.4", longitud: "2", altura: "0.6" },
+      escala: { masa: "35", diametroExterno: "5", diametroInterno: "0.8", longitud: "30", altura: "6" }
+    };
+
+    // Lee un campo numérico y rechaza valores no finitos o fuera de los límites indicados.
+    function leerNumero(id, nombre, minimo, permitirCero = false) {
+      const campo = document.getElementById(id);
+      const valor = campo.value.trim() === "" ? NaN : Number(campo.value);
+      if (!Number.isFinite(valor)) throw new Error(`El campo «${nombre}» debe contener un número válido.`);
+      if (permitirCero ? valor < minimo : valor <= minimo) {
+        const comparador = permitirCero ? "mayor o igual que" : "mayor que";
+        throw new Error(`El campo «${nombre}» debe ser ${comparador} ${minimo}.`);
+      }
+      return valor;
+    }
+
+    function leerEntradas(tipo) {
+      if (tipo === "completo") {
+        const masa = leerNumero("masa-completo", "Masa de la rueda", 0);
+        const radio = leerNumero("radio-completo", "Radio de la rueda", 0);
+        const mu = leerNumero("friccion-completo", "Coeficiente de fricción", 0, true);
+        const longitud = leerNumero("longitud-completo", "Longitud horizontal", 0);
+        const altura = leerNumero("altura-completo", "Altura de la pendiente", 0);
+        return { masa, radio, radioInterior: 0, mu, longitud, altura, modelo: "disco sólido" };
+      }
+
+      const masaGramos = leerNumero("masa-escala", "Masa de la rueda", 0);
+      const diametroExternoCm = leerNumero("diametro-externo", "Diámetro exterior", 0);
+      const diametroInternoCm = leerNumero("diametro-interno", "Diámetro interior", 0, true);
+      const longitudCm = leerNumero("longitud-escala", "Distancia horizontal de la rampa", 0);
+      const alturaCm = leerNumero("altura-escala", "Altura de la rampa", 0);
+      if (diametroInternoCm >= diametroExternoCm) throw new Error("El diámetro interior debe ser menor que el diámetro exterior.");
+
+      // Conversión de gramos a kilogramos y de centímetros a metros.
+      return {
+        masa: masaGramos / 1000,
+        radio: (diametroExternoCm / 100) / 2,
+        radioInterior: (diametroInternoCm / 100) / 2,
+        mu: 0.3,
+        longitud: longitudCm / 100,
+        altura: alturaCm / 100,
+        modelo: "disco anular"
+      };
+    }
+
+    // Resuelve la dinámica de rodadura usando el radio exterior como radio de contacto.
+    function calcularFisica(datos) {
+      const { masa: M, radio: R, radioInterior: r, mu, longitud: L, altura: h } = datos;
+      const theta = Math.atan(h / L);
+      const seno = Math.sin(theta);
+      const coseno = Math.cos(theta);
+      const longitudPendiente = Math.hypot(L, h);
+      if (!Number.isFinite(longitudPendiente) || longitudPendiente <= 0) {
+        throw new Error("Las dimensiones de la pendiente son demasiado grandes o inválidas para calcularse.");
+      }
+
+      // Momento de inercia: disco sólido cuando r = 0; anillo cuando r > 0.
+      const inercia = 0.5 * M * (R * R + r * r);
+      const razonInercia = inercia / (M * R * R);
+
+      // Aceleración a = g sen(theta) / (1 + I/(M R²)).
+      const aceleracion = (GRAVEDAD * seno) / (1 + razonInercia);
+      if (!(aceleracion > 0) || !Number.isFinite(aceleracion)) {
+        throw new Error("La pendiente debe producir una aceleración positiva. Comprueba la altura y la longitud.");
+      }
+
+      // Cinemática desde el reposo sobre la longitud inclinada s.
+      const velocidadFinal = Math.sqrt(2 * aceleracion * longitudPendiente);
+      const tiempo = velocidadFinal / aceleracion;
+
+      // Normal y fricción: se distinguen la fuerza estática requerida y su máximo disponible.
+      const normal = M * GRAVEDAD * coseno;
+      const friccionRequerida = inercia * aceleracion / (R * R);
+      const friccionDisponible = mu * normal;
+      const margenFriccion = friccionDisponible - friccionRequerida;
+      const cumpleRodadura = friccionRequerida <= friccionDisponible + UMBRAL;
+
+      // Energía cinética traslacional y rotacional con omega = v/R.
+      const energiaTraslacional = 0.5 * M * velocidadFinal * velocidadFinal;
+      const velocidadAngular = velocidadFinal / R;
+      const energiaRotacional = 0.5 * inercia * velocidadAngular * velocidadAngular;
+      const energiaTotal = energiaTraslacional + energiaRotacional;
+      const eficiencia = energiaTotal > 0 ? (energiaTraslacional / energiaTotal) * 100 : 0;
+
+      // Índice de calidad (1–20), ponderado 40/30/30.
+      // Se normaliza contra el disco sólido ideal: eficiencia de referencia = 2/3
+      // (66,67 %) e inercia de referencia I/(MR²) = 0,5. Así un disco sólido
+      // con margen de fricción suficiente puede alcanzar 20/20; el código previo
+      // comparaba la eficiencia contra 100 % y hacía imposible la categoría "Buena".
+      const eficienciaReferencia = (2 / 3) * 100;
+      const puntajeEficiencia = Math.min(1, Math.max(0, eficiencia / eficienciaReferencia));
+      const puntajeFriccion = friccionDisponible > 0
+        ? Math.min(1, Math.max(0, margenFriccion / friccionDisponible))
+        : 0;
+      const puntajeInercia = Math.min(1, Math.max(0, (1 - razonInercia) / 0.5));
+      const calidad = Math.min(20, Math.max(1,
+        20 * (0.40 * puntajeEficiencia + 0.30 * puntajeFriccion + 0.30 * puntajeInercia)
+      ));
+
+      return {
+        ...datos, theta, grados: theta * 180 / Math.PI, longitudPendiente, inercia,
+        razonInercia, aceleracion, velocidadFinal, tiempo, normal,
+        friccionRequerida, friccionDisponible, margenFriccion, cumpleRodadura,
+        energiaTraslacional, energiaRotacional, eficiencia, calidad
+      };
+    }
+
+    function numero(valor, decimales = 3) {
+      if (!Number.isFinite(valor)) return "—";
+      return valor.toLocaleString("es-PE", { minimumFractionDigits: decimales, maximumFractionDigits: decimales });
+    }
+
+    function mostrarResultados(tipo, r) {
+      const contenedor = document.getElementById(`resultados-${tipo}`);
+      const tarjetas = contenedor.querySelectorAll(".resultado:not(.resultado--condicion)");
+      const valores = [r.grados, r.aceleracion, r.velocidadFinal, r.tiempo, r.friccionDisponible, r.energiaTraslacional, r.energiaRotacional, r.eficiencia];
+      tarjetas.forEach((tarjeta, indice) => {
+        tarjeta.querySelector(".resultado__valor").textContent = numero(valores[indice], indice === 0 || indice === 7 ? 2 : 3);
+      });
+      const estado = contenedor.querySelector(".resultado--condicion .estado");
+      estado.textContent = r.cumpleRodadura ? "✓ Cumple" : "✕ No cumple";
+      estado.className = `estado ${r.cumpleRodadura ? "estado--bien" : "estado--mal"}`;
+
+      const calidad = document.getElementById(`calidad-${tipo}`);
+      const numeroCalidad = calidad.querySelector(".calidad__numero strong");
+      const insignia = calidad.querySelector(".insignia");
+      const explicacion = calidad.querySelector(".calidad__texto p");
+      numeroCalidad.textContent = numero(r.calidad, 1);
+      let clase = "mala", etiqueta = "Mala calidad";
+      if (r.calidad >= 15) { clase = "buena"; etiqueta = "Buena calidad"; }
+      else if (r.calidad >= 9) { clase = "media"; etiqueta = "Calidad media"; }
+      insignia.className = `insignia insignia--${clase}`;
+      insignia.textContent = etiqueta;
+      const lecturaFriccion = r.cumpleRodadura
+        ? `La fricción disponible supera la requerida por ${numero(r.margenFriccion, 4)} N.`
+        : `La fricción disponible es insuficiente por ${numero(Math.abs(r.margenFriccion), 4)} N; el modelo ideal no garantiza rodadura pura.`;
+      explicacion.textContent = `${lecturaFriccion} La nota combina eficiencia (40 %), seguridad de fricción (30 %) y distribución de masa/inercia (30 %).`;
+      document.getElementById(`detalle-friccion-${tipo}`).innerHTML =
+        `<span>Fricción estática requerida: ${numero(r.friccionRequerida, 4)} N</span><span>Máxima disponible: ${numero(r.friccionDisponible, 4)} N</span><span>Margen: ${numero(r.margenFriccion, 4)} N</span>`;
+    }
+
+    function actualizarComparacion() {
+      const filas = [
+        ["Ángulo", "grados", r => `${numero(r.grados, 2)}°`],
+        ["Aceleración lineal", "aceleracion", r => `${numero(r.aceleracion, 3)} m/s²`],
+        ["Velocidad final", "velocidadFinal", r => `${numero(r.velocidadFinal, 3)} m/s`],
+        ["Tiempo de recorrido", "tiempo", r => `${numero(r.tiempo, 3)} s`],
+        ["Eficiencia de rodadura", "eficiencia", r => `${numero(r.eficiencia, 2)} %`],
+        ["Calidad", "calidad", r => `${numero(r.calidad, 1)} / 20`]
+      ];
+      document.getElementById("tabla-comparacion").innerHTML = filas.map(([nombre, , formato]) => {
+        const completo = ultimosResultados.completo ? formato(ultimosResultados.completo) : "—";
+        const escala = ultimosResultados.escala ? formato(ultimosResultados.escala) : "—";
+        return `<tr><td>${nombre}</td><td>${completo}</td><td>${escala}</td></tr>`;
+      }).join("");
+    }
+
+    function mostrarError(tipo, mensaje) {
+      const caja = document.getElementById(`error-${tipo}`);
+      caja.textContent = mensaje;
+      caja.classList.add("visible");
+    }
+    function limpiarError(tipo) {
+      const caja = document.getElementById(`error-${tipo}`);
+      caja.textContent = "";
+      caja.classList.remove("visible");
+    }
+
+    function obtenerGrafica(tipo) {
+      const estado = simulaciones[tipo];
+      if (estado.grafica) return estado.grafica;
+      const lienzo = document.getElementById(`grafica-${tipo}`);
+      if (typeof Chart === "undefined") {
+        document.getElementById(`estado-animacion-${tipo}`).textContent = "No se pudo cargar Chart.js; revisa tu conexión a internet.";
+        return null;
+      }
+      estado.grafica = new Chart(lienzo, {
+        type: "line",
+        data: { datasets: [{ label: "Velocidad (m/s)", data: [], parsing: false, borderColor: "#64D85A", backgroundColor: "rgba(100,216,90,.14)", pointBackgroundColor: "#E6D3C6", pointBorderColor: "#64D85A", pointRadius: 2.5, borderWidth: 2, tension: 0.15, fill: true }] },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: false,
+          plugins: {
+            legend: { labels: { color: "#EEEAE5", font: { family: "Inter, sans-serif", size: 10 } } },
+            tooltip: { callbacks: { label: contexto => ` ${numero(contexto.parsed.y, 3)} m/s` } }
+          },
+          scales: {
+            x: { type: "linear", title: { display: true, text: "Tiempo (s)", color: "#BEBAB4", font: { size: 10 } }, ticks: { color: "#BEBAB4", maxTicksLimit: 7 }, grid: { color: "rgba(255,255,255,.08)" } },
+            y: { beginAtZero: true, title: { display: true, text: "Velocidad (m/s)", color: "#BEBAB4", font: { size: 10 } }, ticks: { color: "#BEBAB4" }, grid: { color: "rgba(255,255,255,.08)" } }
+          }
+        }
+      });
+      return estado.grafica;
+    }
+
+    function reiniciarGrafica(tipo) {
+      const grafica = obtenerGrafica(tipo);
+      if (!grafica) return;
+      grafica.data.datasets[0].data = [];
+      grafica.update("none");
+    }
+
+    // Dibuja la rampa con el ángulo calculado y ubica la rueda según la distancia física recorrida.
+    function dibujarEscena(tipo, progreso = 0, distancia = 0, velocidad = 0) {
+      const lienzo = document.getElementById(`lienzo-${tipo}`);
+      const rect = lienzo.getBoundingClientRect();
+      if (!rect.width) return;
+      const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      lienzo.width = Math.round(rect.width * dpr);
+      lienzo.height = Math.round(rect.height * dpr);
+      const ctx = lienzo.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const W = rect.width, H = rect.height;
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = "#181818"; ctx.fillRect(0, 0, W, H);
+
+      // Retícula tenue de referencia.
+      ctx.strokeStyle = "rgba(238,234,229,.055)"; ctx.lineWidth = 1;
+      for (let x = 20; x < W; x += 32) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+      for (let y = 20; y < H; y += 32) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+      const r = simulaciones[tipo].resultados;
+      if (!r) {
+        ctx.fillStyle = "#BEBAB4"; ctx.textAlign = "center"; ctx.font = "13px Inter, sans-serif";
+        ctx.fillText("Calcula los parámetros para visualizar la pendiente", W / 2, H / 2);
+        return;
+      }
+      const angulo = r.theta;
+      const escala = Math.min((W * .70) / r.longitud, (H * .58) / r.altura);
+      const dx = r.longitud * escala, dy = r.altura * escala;
+      const x0 = (W - dx) / 2, y0 = (H - dy) / 2 + 3;
+      const x1 = x0 + dx, y1 = y0 + dy;
+      const radioVisual = Math.max(15, Math.min(29, Math.min(W, H) * .075));
+      const ux = Math.cos(angulo), uy = Math.sin(angulo);
+      const nx = Math.sin(angulo), ny = -Math.cos(angulo);
+
+      // Rampa y línea base.
+      ctx.strokeStyle = "#A4A19B"; ctx.lineWidth = 9; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      ctx.strokeStyle = "#5E5D59"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(Math.min(W - 18, x1 + 58), y1); ctx.stroke();
+      ctx.fillStyle = "#A4A19B"; ctx.font = "11px Inter, sans-serif"; ctx.textAlign = "left";
+      ctx.fillText(`θ = ${numero(r.grados, 2)}°`, Math.max(10, x0), Math.max(16, y0 - 25));
+      ctx.textAlign = "right"; ctx.fillText(`s = ${numero(r.longitudPendiente, 3)} m`, Math.min(W - 12, x1), Math.min(H - 9, y1 + 25));
+
+      const recorrido = Math.min(1, Math.max(0, progreso));
+      const contactoX = x0 + dx * recorrido;
+      const contactoY = y0 + dy * recorrido;
+      const centroX = contactoX + nx * radioVisual;
+      const centroY = contactoY + ny * radioVisual;
+      const giro = distancia / r.radio;
+
+      // Cuerpo de la rueda y radios: el giro es proporcional a la distancia recorrida / radio.
+      ctx.save(); ctx.translate(centroX, centroY); ctx.rotate(giro);
+      ctx.fillStyle = "#E6D3C6"; ctx.strokeStyle = "#64D85A"; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(0, 0, radioVisual, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "#282522"; ctx.lineWidth = 2.2;
+      for (let i = 0; i < 8; i++) {
+        const a = i * Math.PI / 4;
+        ctx.beginPath(); ctx.moveTo(Math.cos(a) * 4, Math.sin(a) * 4);
+        ctx.lineTo(Math.cos(a) * (radioVisual - 4), Math.sin(a) * (radioVisual - 4)); ctx.stroke();
+      }
+      ctx.fillStyle = "#181818"; ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+
+      // Etiqueta dinámica de velocidad sobre la rueda.
+      const etiquetaX = Math.max(56, Math.min(W - 56, centroX));
+      const etiquetaY = Math.max(24, centroY - radioVisual - 17);
+      ctx.fillStyle = "rgba(17,17,17,.92)"; ctx.strokeStyle = "#64D85A"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.roundRect(etiquetaX - 48, etiquetaY - 14, 96, 23, 4); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#EAF6E8"; ctx.textAlign = "center"; ctx.font = "600 11px Inter, sans-serif";
+      ctx.fillText(`v = ${numero(velocidad, 2)} m/s`, etiquetaX, etiquetaY + 1);
+
+      // Indicador de progreso inferior.
+      ctx.fillStyle = "#5E5D59"; ctx.fillRect(18, H - 15, W - 36, 3);
+      ctx.fillStyle = "#64D85A"; ctx.fillRect(18, H - 15, (W - 36) * recorrido, 3);
+    }
+
+    function detener(tipo, restaurar = true) {
+      const estado = simulaciones[tipo];
+      if (estado.animacion !== null) cancelAnimationFrame(estado.animacion);
+      estado.animacion = null;
+      estado.ultimoPunto = 0;
+      if (restaurar) {
+        reiniciarGrafica(tipo);
+        dibujarEscena(tipo, 0, 0, 0);
+        document.getElementById(`estado-animacion-${tipo}`).textContent = "Simulación detenida y reiniciada";
+      }
+    }
+
+    function iniciar(tipo) {
+      limpiarError(tipo);
+      detener(tipo, false);
+      let resultados;
+      try {
+        resultados = calcularFisica(leerEntradas(tipo));
+      } catch (error) {
+        mostrarError(tipo, error.message);
+        return;
+      }
+      registrarCalculo(tipo, resultados);
+      reiniciarGrafica(tipo);
+      const grafica = obtenerGrafica(tipo);
+      if (grafica) {
+        grafica.data.datasets[0].data.push({ x: 0, y: 0 });
+        grafica.update("none");
+      }
+      dibujarEscena(tipo, 0, 0, 0);
+      const estado = simulaciones[tipo];
+      estado.resultados = resultados;
+      estado.ultimoPunto = 0;
+      const comienzo = performance.now();
+      document.getElementById(`estado-animacion-${tipo}`).textContent = resultados.cumpleRodadura
+        ? "Simulación en curso · rodadura pura posible"
+        : "Simulación ideal en curso · advertencia: fricción insuficiente";
+
+      function cuadro(ahora) {
+        const tiempoTranscurrido = Math.min((ahora - comienzo) / 1000, resultados.tiempo);
+        const distancia = Math.min(resultados.longitudPendiente, 0.5 * resultados.aceleracion * tiempoTranscurrido * tiempoTranscurrido);
+        const velocidad = Math.min(resultados.velocidadFinal, resultados.aceleracion * tiempoTranscurrido);
+        const progreso = distancia / resultados.longitudPendiente;
+        dibujarEscena(tipo, progreso, distancia, velocidad);
+
+        // Se añade un punto a la gráfica aproximadamente cada 70 ms de tiempo real.
+        if (grafica && (tiempoTranscurrido - estado.ultimoPunto >= 0.07 || tiempoTranscurrido >= resultados.tiempo)) {
+          grafica.data.datasets[0].data.push({ x: tiempoTranscurrido, y: velocidad });
+          grafica.update("none");
+          estado.ultimoPunto = tiempoTranscurrido;
+        }
+
+        if (tiempoTranscurrido >= resultados.tiempo) {
+          if (grafica && estado.ultimoPunto < resultados.tiempo) {
+            grafica.data.datasets[0].data.push({ x: resultados.tiempo, y: resultados.velocidadFinal });
+            grafica.update("none");
+          }
+          estado.animacion = null;
+          document.getElementById(`estado-animacion-${tipo}`).textContent = `Recorrido completado · ${numero(resultados.tiempo, 3)} s · ${numero(resultados.velocidadFinal, 3)} m/s`;
+          return;
+        }
+        estado.animacion = requestAnimationFrame(cuadro);
+      }
+      estado.animacion = requestAnimationFrame(cuadro);
+    }
+
+    function registrarCalculo(tipo, resultados) {
+      simulaciones[tipo].resultados = resultados;
+      ultimosResultados[tipo] = resultados;
+      mostrarResultados(tipo, resultados);
+      actualizarComparacion();
+      document.getElementById(`info-${tipo}`).textContent = resultados.cumpleRodadura
+        ? "Cálculo actualizado. La fricción disponible permite la rodadura pura bajo las hipótesis del modelo."
+        : "Cálculo actualizado. La fricción no alcanza para mantener rodadura pura; revisa la superficie o la pendiente.";
+      dibujarEscena(tipo, 0, 0, 0);
+    }
+
+    function calcular(tipo) {
+      limpiarError(tipo);
+      try {
+        const resultados = calcularFisica(leerEntradas(tipo));
+        detener(tipo, false);
+        registrarCalculo(tipo, resultados);
+        reiniciarGrafica(tipo);
+        document.getElementById(`estado-animacion-${tipo}`).textContent = "Cálculo listo · pulsa Iniciar Simulación";
+      } catch (error) {
+        mostrarError(tipo, error.message);
+      }
+    }
+
+    function restablecer(tipo) {
+      detener(tipo, true);
+      const datos = valoresIniciales[tipo];
+      Object.entries(datos).forEach(([nombre, valor]) => {
+        const prefijo = tipo === "completo" ? ({ masa: "masa-completo", radio: "radio-completo", friccion: "friccion-completo", longitud: "longitud-completo", altura: "altura-completo" })[nombre]
+          : ({ masa: "masa-escala", diametroExterno: "diametro-externo", diametroInterno: "diametro-interno", longitud: "longitud-escala", altura: "altura-escala" })[nombre];
+        document.getElementById(prefijo).value = valor;
+      });
+      if (tipo === "escala") document.getElementById("friccion-escala").value = "0.3";
+      limpiarError(tipo);
+      document.getElementById(`info-${tipo}`).textContent = "Valores de ejemplo restablecidos. Calcula para obtener nuevos resultados.";
+      const resultados = document.getElementById(`resultados-${tipo}`);
+      resultados.querySelectorAll(".resultado__valor").forEach(el => el.textContent = "—");
+      const estado = resultados.querySelector(".resultado--condicion .estado");
+      estado.textContent = "Pendiente de cálculo"; estado.className = "estado";
+      const calidad = document.getElementById(`calidad-${tipo}`);
+      calidad.querySelector(".calidad__numero strong").textContent = "—";
+      calidad.querySelector(".insignia").textContent = "Sin evaluar";
+      calidad.querySelector(".insignia").className = "insignia";
+      calidad.querySelector(".calidad__texto p").textContent = "El índice de calidad aparecerá después del cálculo.";
+      document.getElementById(`detalle-friccion-${tipo}`).innerHTML = "<span>Fricción estática requerida: —</span><span>Margen disponible: —</span>";
+      ultimosResultados[tipo] = null;
+      simulaciones[tipo].resultados = null;
+      actualizarComparacion();
+      dibujarEscena(tipo, 0, 0, 0);
+    }
+
+    // Formularios, controles de animación y navegación entre paneles.
+    ["completo", "escala"].forEach(tipo => {
+      document.getElementById(`form-${tipo}`).addEventListener("submit", evento => {
+        evento.preventDefault(); calcular(tipo);
+      });
+      document.querySelector(`[data-iniciar="${tipo}"]`).addEventListener("click", () => iniciar(tipo));
+      document.querySelector(`[data-detener="${tipo}"]`).addEventListener("click", () => detener(tipo, true));
+      document.querySelector(`[data-restablecer="${tipo}"]`).addEventListener("click", () => restablecer(tipo));
+      obtenerGrafica(tipo);
+      dibujarEscena(tipo);
+    });
+
+    document.querySelectorAll(".pestana").forEach(pestana => {
+      pestana.addEventListener("click", () => {
+        const destino = pestana.dataset.panel;
+        document.querySelectorAll(".pestana").forEach(item => item.setAttribute("aria-selected", String(item === pestana)));
+        document.getElementById("panel-completo").hidden = destino !== "completo";
+        document.getElementById("panel-escala").hidden = destino !== "escala";
+        // Al cambiar de pestaña se detiene y reinicia el movimiento del panel que queda oculto.
+        detener(destino === "completo" ? "escala" : "completo", true);
+        const actual = simulaciones[destino].resultados;
+        if (actual) dibujarEscena(destino, 0, 0, 0);
+      });
+    });
+
+    window.addEventListener("resize", () => {
+      ["completo", "escala"].forEach(tipo => {
+        const estado = simulaciones[tipo];
+        // Si una animación está activa, el siguiente fotograma repintará el lienzo con su progreso.
+        if (estado.animacion === null) dibujarEscena(tipo, 0, 0, 0);
+      });
+    });
+  </script>
+</body>
+</html>
